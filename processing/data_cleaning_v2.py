@@ -251,17 +251,39 @@ def extract_stats(xlsx_path):
 def compute_yoy(stats_this: dict, stats_last: dict) -> dict:
     """전년 동기 비교 통계 계산"""
 
-    def cmp_monthly(this_l, last_l):
+    def cmp_monthly(this_l1, this_l2, last_l1, last_l2):
+        """월별 비교: 합산 + 호선별 세부 데이터 포함"""
+        # 두 호선 월별을 각각 합산
+        def merge_monthly(l1, l2):
+            all_m = list(l1['monthly'].keys()) + [m for m in l2['monthly'].keys() if m not in l1['monthly']]
+            return {m: l1['monthly'].get(m, 0) + l2['monthly'].get(m, 0) for m in all_m}
+        t_all = merge_monthly(this_l1, this_l2)
+        l_all = merge_monthly(last_l1, last_l2)
         result = {}
-        for m, v in this_l['monthly'].items():
-            lv = last_l['monthly'].get(m, 0)
-            result[m] = {'this': v, 'last': lv, 'diff': v - lv}
+        for m, v in t_all.items():
+            lv = l_all.get(m, 0)
+            # 합산 + 호선별 세부 데이터 함께 저장
+            result[m] = {
+                'this': v, 'last': lv, 'diff': v - lv,
+                'this_l1': this_l1['monthly'].get(m, 0),
+                'this_l2': this_l2['monthly'].get(m, 0),
+                'last_l1': last_l1['monthly'].get(m, 0),
+                'last_l2': last_l2['monthly'].get(m, 0),
+            }
         return result
 
-    def cmp_stations(this_l, last_l, n=6):
+    def cmp_stations(this_l1, this_l2, last_l1, last_l2, n=6):
+        """1호선 + 2호선 합산 역사별 비교"""
+        def merge_stations(l1, l2):
+            all_s = set(list(l1['stations']) + list(l2['stations']))
+            return {s: l1['stations'].get(s, 0) + l2['stations'].get(s, 0) for s in all_s}
+        t_all = merge_stations(this_l1, this_l2)
+        l_all = merge_stations(last_l1, last_l2)
+        # 금년 건수 기준 정렬 후 상위 n개
+        sorted_top = sorted(t_all.items(), key=lambda x: -x[1])[:n]
         result = {}
-        for station, cnt in list(this_l['stations'].items())[:n]:
-            lv = last_l['stations'].get(station, 0)
+        for station, cnt in sorted_top:
+            lv = l_all.get(station, 0)
             result[station] = {'this': cnt, 'last': lv, 'diff': cnt - lv}
         return result
 
@@ -290,8 +312,8 @@ def compute_yoy(stats_this: dict, stats_last: dict) -> dict:
                       'pct': round(((tl1['total']-ll1['total'])/max(ll1['total'],1))*100,1)},
             'line2': {'this':tl2['total'],'last':ll2['total'],'diff':tl2['total']-ll2['total'],
                       'pct': round(((tl2['total']-ll2['total'])/max(ll2['total'],1))*100,1)},
-            'monthly':  cmp_monthly(tl1, ll1),
-            'stations': cmp_stations(tl1, ll1),
+            'monthly':  cmp_monthly(tl1, tl2, ll1, ll2),
+            'stations': cmp_stations(tl1, tl2, ll1, ll2),
             'faults':   cmp_faults(tl1, tl2, ll1, ll2),
             'year_this': stats_this['year'], 'year_last': stats_last['year'],
             'quarter':   stats_this['quarter'],

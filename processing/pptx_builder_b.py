@@ -720,6 +720,11 @@ def _yoy_slide(yoy_data: dict, slide_bg, pri, sec, ter, acc, quarter) -> str:
     m_labels = list(monthly.keys())
     m_this   = [v.get('this', 0) for v in monthly.values()]
     m_last   = [v.get('last', 0) for v in monthly.values()]
+    # 방식 B용: 호선별 월별 세부 데이터
+    m_this_l1 = [v.get('this_l1', 0) for v in monthly.values()]
+    m_this_l2 = [v.get('this_l2', 0) for v in monthly.values()]
+    m_last_l1 = [v.get('last_l1', 0) for v in monthly.values()]
+    m_last_l2 = [v.get('last_l2', 0) for v in monthly.values()]
 
     # 장치별 상위 5개
     faults    = yoy_data.get('faults', {})
@@ -788,19 +793,21 @@ def _yoy_slide(yoy_data: dict, slide_bg, pri, sec, ter, acc, quarter) -> str:
   sl.addShape('rect',{{x:0.4,y:2.6,w:0.06,h:0.38,fill:{{color:'FFFFFF'}},line:{{color:'FFFFFF'}}}});
   sl.addText('전체 추세 : 전년 동기 대비 {trend}  ({td:+d}건, {tp_sign})',{{x:0.6,y:2.63,w:8.8,h:0.32,fontSize:12,bold:true,color:'FFFFFF',fontFace:'Arial',margin:0,valign:'middle'}});
 
-  // 월별 꺾은선 차트 (전체 너비 활용)
+  // 월별 꺾은선 차트 (호선별 4시리즈)
   sl.addChart(pres.charts.LINE,
-    [{{name:'{year_this}년',labels:{_j(m_labels)},values:{_j(m_this)}}},
-     {{name:'{year_last}년',labels:{_j(m_labels)},values:{_j(m_last)}}}],
+    [{{name:'{year_this}년 1호선',labels:{_j(m_labels)},values:{_j(m_this_l1)}}},
+     {{name:'{year_this}년 2호선',labels:{_j(m_labels)},values:{_j(m_this_l2)}}},
+     {{name:'{year_last}년 1호선',labels:{_j(m_labels)},values:{_j(m_last_l1)}}},
+     {{name:'{year_last}년 2호선',labels:{_j(m_labels)},values:{_j(m_last_l2)}}}],
     {{x:0.4,y:3.12,w:5.8,h:2.18,
-      chartColors:['{sec}','BBCCDD'],
-      lineSize:2.5,
+      chartColors:['{sec}','{acc}','BBCCDD','FFCC99'],
+      lineSize:2,
       chartArea:{{fill:{{color:'FFFFFF'}},roundedCorners:true}},
       catAxisLabelColor:'64748B',valAxisLabelColor:'64748B',
       valGridLine:{{color:'E2E8F0',size:0.5}},catGridLine:{{style:'none'}},
-      showValue:true,dataLabelColor:'{pri}',dataLabelFontSize:10,
-      showLegend:true,legendPos:'b',legendFontSize:10,
-      showTitle:true,title:'월별 장애건수 비교 ({year_last}년 vs {year_this}년)',
+      showValue:false,
+      showLegend:true,legendPos:'b',legendFontSize:8,
+      showTitle:true,title:'월별 장애건수 비교 - 호선별 ({year_last}년 vs {year_this}년)',
       titleFontSize:11,titleColor:'{pri}'}});
 
   // 월별 추이 텍스트 요약
