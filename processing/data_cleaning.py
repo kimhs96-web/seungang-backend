@@ -34,8 +34,9 @@ def normalize(s):
 
 
 def run_data_cleaning(src_path, cls_path, out_path):
-    wb_src = load_workbook(str(src_path))
-    wb_cls = load_workbook(str(cls_path))
+    import gc
+    wb_src = load_workbook(str(src_path), data_only=True)
+    wb_cls = load_workbook(str(cls_path), data_only=True)
     if '장애신고' in wb_src.sheetnames:
         ws_src = wb_src['장애신고']
     elif 'sheet1' in [s.lower() for s in wb_src.sheetnames]:
@@ -161,6 +162,12 @@ def run_data_cleaning(src_path, cls_path, out_path):
     build_sheet('1호선ES', es1, es_io, es_fd, ES_PRIORITY)
     build_sheet('2호선ES', es2, es_io, es_fd, ES_PRIORITY)
     wb_out.save(str(out_path))
+    # 메모리 명시적 해제 (Render 무료 512MB 대응)
+    wb_src.close()
+    wb_cls.close()
+    wb_out.close()
+    del wb_src, wb_cls, wb_out, all_rows, el_rows, es_rows, el1, el2, es1, es2
+    gc.collect()
 
 
 def _detect_repeats(rows, threshold=REPEAT_THRESHOLD):
@@ -180,7 +187,8 @@ def _detect_repeats(rows, threshold=REPEAT_THRESHOLD):
 
 
 def extract_stats(xlsx_path):
-    wb = load_workbook(str(xlsx_path))
+    import gc
+    wb = load_workbook(str(xlsx_path), data_only=True)
 
     def load_rows(sn):
         ws = wb[sn]
@@ -235,7 +243,7 @@ def extract_stats(xlsx_path):
     else:
         quarter, yr, period = '4분기', 2025, '10월 ~ 12월'
 
-    return {
+    result = {
         'quarter': quarter, 'year': yr, 'period': period,
         'el': {
             'line1': make_line(el1, 124), 'line2': make_line(el2, 84),
@@ -246,6 +254,10 @@ def extract_stats(xlsx_path):
             'repeats': _detect_repeats(es1 + es2),   # ← 신규
         },
     }
+    wb.close()
+    del wb, el1, el2, es1, es2
+    gc.collect()
+    return result
 
 
 def compute_yoy(stats_this: dict, stats_last: dict) -> dict:

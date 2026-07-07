@@ -98,6 +98,7 @@ def serve_static(full_path: str):
 
 async def _run_pipeline(job_id: str, job_dir: Path,
                          src_path: Path, cls_path: Path, last_path):
+    import gc
     loop = asyncio.get_event_loop()
     try:
         out_xlsx = job_dir / "fault_report.xlsx"
@@ -107,9 +108,11 @@ async def _run_pipeline(job_id: str, job_dir: Path,
         jobs[job_id].update({"step": "데이터 정제 중...", "progress": 12})
         await loop.run_in_executor(None, run_data_cleaning, src_path, cls_path, out_xlsx)
         if not out_xlsx.exists(): raise RuntimeError("데이터 정제 실패")
+        gc.collect()
 
         jobs[job_id].update({"step": "데이터 분석 중...", "progress": 30})
         stats = await loop.run_in_executor(None, extract_stats, out_xlsx)
+        gc.collect()
 
         # ── 전년 동기 비교 (작년 파일이 있을 때만)
         yoy = None
@@ -117,15 +120,20 @@ async def _run_pipeline(job_id: str, job_dir: Path,
             jobs[job_id].update({"step": "전년 동기 비교 분석 중...", "progress": 42})
             last_xlsx = job_dir / "fault_report_last.xlsx"
             await loop.run_in_executor(None, run_data_cleaning, last_path, cls_path, last_xlsx)
+            gc.collect()
             if last_xlsx.exists():
                 stats_last = await loop.run_in_executor(None, extract_stats, last_xlsx)
                 yoy = compute_yoy(stats, stats_last)
+                del stats_last
+                gc.collect()
 
         jobs[job_id].update({"step": "엘리베이터 보고서 생성 중...", "progress": 55})
         await loop.run_in_executor(None, generate_pptx, stats, "EL", str(el_pptx), yoy)
+        gc.collect()
 
         jobs[job_id].update({"step": "에스컬레이터 보고서 생성 중...", "progress": 78})
         await loop.run_in_executor(None, generate_pptx, stats, "ES", str(es_pptx), yoy)
+        gc.collect()
 
         year    = stats.get("year",    2025)
         quarter = stats.get("quarter", "4분기")
