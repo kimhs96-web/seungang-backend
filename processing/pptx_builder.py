@@ -219,13 +219,6 @@ def _build_analysis_opinion(quarter, l1_total, l2_total, monthly_trend,
     l2_2nd  = l2_keys[1] if len(l2_keys) > 1 else ""
     l2_2nd_str = f"  {l2_2nd} 장애 2위로 집중 관리 필요" if l2_2nd else ""
 
-    # 최다 발생 월
-    if l1_months and l1_vals:
-        max_idx    = l1_vals.index(max(l1_vals))
-        peak_month = l1_months[max_idx]
-    else:
-        peak_month = quarter[:2]
-
     # 실제 \n 줄바꿈 사용 (1호선/2호선 사이 빈 줄 포함)
     text = (
         f"▶ 1호선 : {quarter} 총 {l1_total}건 발생 {trend_dir}\n"
@@ -237,11 +230,6 @@ def _build_analysis_opinion(quarter, l1_total, l2_total, monthly_trend,
     )
     if l2_2nd_str:
         text += f"\n{l2_2nd_str}"
-    text += (
-        f"\n\n"
-        f"⇒ {peak_month} 증가 원인 : 동절기 온도변화에 의한\n"
-        f"  전장품·센서류 오동작 증가 추정"
-    )
 
     return _q(text)
 
@@ -344,7 +332,7 @@ def _build_js(stats, rt, l1, l2, total, avg_rec, fault_list, output_path, yoy=No
     _yoy_data       = (yoy or {}).get(rt.lower(), {})
     _src_data       = stats['el'] if rt == 'EL' else stats['es']
     _repeats        = (_src_data.get('repeats') or [])
-    _has_repeats    = len(_repeats) > 0
+    _has_repeats    = False   # 반복장애 예방점검 슬라이드 비활성화 (사용자 요청)
     # 페이지 번호: 옥내외(_p_io) 다음부터
     _p_yoy     = _p_io + 1 if _has_yoy else None
     _yoy_pages = 2 if _has_yoy else 0                          # 전년비교는 2슬라이드
